@@ -1,0 +1,328 @@
+﻿@page "/"
+@inject IMovie _IMovie
+@inject IJSRuntime _IJSRuntime
+
+<style>
+    .footer {
+        position: fixed;
+        bottom: 0;
+    }
+</style>
+
+<div class="row margin-class">
+    <div class="col-8">
+        <h4>
+            <span class="badge badge-primary">
+                <i class="fa fa-music" aria-hidden="true"></i>&nbsp; One and only Maestro Ilaiyaraaja's Music Tracker By <a href="http://saddamhossain.net" target="_blank" style="color:white"> Md. Saddam Hossain Rana </a>
+            </span>
+        </h4>
+    </div>
+    @if (selectedSong != null)
+    {
+        <div class="col-4" style="text-align: center;">
+            <h5><span class="badge badge-info">Song : @selectedSong</span></h5>
+        </div>
+    }
+</div>
+
+<div class="row margin-class">
+    <div class="row col-5">
+        <div class="col-6">
+            <h5><span class="badge badge-secondary">Choose a Language</span></h5>
+            <select class="form-control" @bind="@Filter_Language" @bind:event="oninput" @onchange="(()=> On_Change_Filter_Language())">
+                <option value="All"> @InitialText (@all_songs_count)</option>
+                @if (languageGroupedViewModel != null)
+                {
+                    foreach (var item in languageGroupedViewModel)
+                    {
+                        <option value="@item.LanguageName"> @item.LanguageName (@item.TotalCount) </option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-6">
+            <h5><span class="badge badge-secondary">Choose a Director</span></h5>
+            <select class="form-control" @bind="@Filter_Director" @bind:event="oninput" @onchange="(()=> On_Change_Filter_Director())">
+                <option value="All"> @InitialText (@all_songs_count)</option>
+                @if (directorsGroupedViewModel != null)
+                {
+                    foreach (var item in directorsGroupedViewModel)
+                    {
+                        <option value="@item.DirectorName"> @item.DirectorName (@item.TotalCount) </option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-6">
+            <h5><span class="badge badge-secondary">Choose an Year</span></h5>
+            <select class="form-control" @bind="@Filter_Year" @bind:event="oninput" @onchange="(()=> On_Change_Filter_Year())">
+                <option value="All"> @InitialText (@all_songs_count)</option>
+                @if (yearsGroupedViewModel != null)
+                {
+                    foreach (var item in yearsGroupedViewModel)
+                    {
+                        <option value="@item.Year"> @item.Year (@item.TotalCount) </option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="row margin-class">
+        <div class="col-8">
+            <img src="images/maestro.jpg" alt="Image" width="350" />
+        </div>
+        <div class="col-4">
+            @if (is_current_song_embeded)
+            {
+                <iframe height="200" src="@Url_Link" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            }
+        </div>
+    </div>
+
+    <div class="col-8">
+        <h5><span class="badge badge-info">Selected Movies Count :@selectedSongCount </span></h5>
+        <table class="table table-hover">
+            <thead>
+                <tr class="d-flex table-warning">
+                    <th class="col-2">Year</th>
+                    <th class="col-3">Film</th>
+                    <th class="col-3">Director</th>
+                    <th class="col-2">Language</th>
+                    <th class="col-2">Songs</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in movie_list)
+                {
+                    <tr class="d-flex table-primary">
+                        <td class="col-2">  @item.Year </td>
+                        <td class="col-3">  @item.Film  </td>
+                        <td class="col-3">  @item.Director  </td>
+                        <td class="col-2">  @item.Language  </td>
+                        <td class="col-2">
+                            <button type="button" @onclick="(()=> SelectedSong(item.FilmID))" class="btn btn-success"> Select </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (song_list != null)
+    {
+        <div class="col-4" style="text-align: center;">
+            <h5><span class="badge badge-info">Selected Movie : @selectedMovie (@selectedMovieLanguage)</span></h5>
+            @if (song_list.FirstOrDefault().Name == null)
+            {
+                <div>
+                    <img src="images/comingsoon.jpg" width="350" />
+                </div>
+            }
+            else
+            {
+                <table class="table table-hover">
+                    <thead>
+                        <tr class="d-flex table-warning">
+                            <th class="col-5">Song</th>
+                            <th class="col-4">Singers</th>
+                            <th class="col-3">Play</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in song_list)
+                        {
+                            <tr class="d-flex table-primary">
+                                <td class="col-5"> @item.Name </td>
+                                <td class="col-4"> @item.Singers </td>
+                                <td class="col-3"><button type="button" class="btn btn-success" @onclick="(() => PlayYoutube(item.YoutubeLink, item.Name, true))">Play </button></td>
+                            </tr>
+
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+
+
+
+</div>
+
+<div class="row margin-class footer">
+    <strong> Disclaimer: </strong> The information in this site taken from various sources. We are not claiming 100% accuracy. All YouTube videos are just embedded in this site. We do not have any copyright on them, the credit is given to the respective YouTube video owners.
+</div>
+
+
+@code{
+    #region variable declare
+    protected string InitialText { get; set; } = "All";
+
+    protected string Filter_Language { set; get; }
+    protected string Filter_Director { set; get; }
+    protected string Filter_Year { set; get; }
+
+    protected string searchText { set; get; }
+
+    protected IEnumerable<Movie> movie_list { set; get; }
+    protected IEnumerable<Song> song_list { set; get; }
+
+    protected string selectedLanguage { set; get; }
+    protected string selectedDirector { set; get; }
+    protected string selectedYear { set; get; }
+
+    protected string selectedMovie { set; get; }
+    protected string selectedMovieLanguage { set; get; }
+
+    protected string selectedSong { set; get; }
+    protected int selectedSongCount { set; get; }
+    protected int filmId { set; get; }
+
+    protected int languageCount { set; get; }
+    protected int directorsCount { set; get; }
+    protected int yearsCount { set; get; }
+
+    protected int all_songs_count { set; get; }
+    protected int addedSongsCount { set; get; }
+
+    protected string All { set; get; }
+
+    protected IEnumerable<LanguageGroupedViewModel> languageGroupedViewModel = new List<LanguageGroupedViewModel>();
+    protected IEnumerable<DirectorsGroupedViewModel> directorsGroupedViewModel = new List<DirectorsGroupedViewModel>();
+    protected IEnumerable<YearsGroupedViewModel> yearsGroupedViewModel = new List<YearsGroupedViewModel>();
+
+    protected bool is_current_song_embeded { set; get; }
+    protected string Url_Link { set; get; }
+    #endregion
+
+    protected override Task OnInitializedAsync()
+    {
+        movie_list = _IMovie.GetMovies().ToList();
+        directorsCount = _IMovie.GetMovies().GroupBy(s => s.Director).Count();
+        yearsCount = _IMovie.GetMovies().GroupBy(s => s.Year).Count();
+
+
+        all_songs_count = _IMovie.GetMovies().Count();
+        selectedSongCount = _IMovie.GetMovies().Count();
+        addedSongsCount = _IMovie.GetMovies().Select(s => s.Songs.Where(s => s.YoutubeLink != "")).Count();
+
+        languageGroupedViewModel = _IMovie.GetMovies().GroupBy(s => new { s.Language }).OrderBy(g => g.Key.Language).Select(g => new LanguageGroupedViewModel
+        {
+            LanguageName = g.Key.Language,
+            TotalCount = g.Count()
+        });
+
+        directorsGroupedViewModel = _IMovie.GetMovies().GroupBy(s => new { s.Director }).OrderBy(g => g.Key.Director).Select(g => new DirectorsGroupedViewModel
+        {
+            DirectorName = g.Key.Director,
+            TotalCount = g.Count()
+        });
+
+        yearsGroupedViewModel = from s in _IMovie.GetMovies()
+                                group s by new { s.Year } into g
+                                orderby g.Key.Year
+                                select new YearsGroupedViewModel { Year = g.Key.Year, TotalCount = g.Count() };
+
+        return base.OnInitializedAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+    }
+
+    protected void SelectedSong(int filmId)
+    {
+        song_list = _IMovie.GetSongsByFilmId(filmId);
+        var movieDetails = _IMovie.GetMovieDetailsByFilmId(filmId);
+        selectedMovie = movieDetails.Film;
+        selectedMovieLanguage = movieDetails.Language;
+
+        StateHasChanged();
+    }
+
+    protected void On_Change_Filter_Language()
+    {
+        if (Filter_Language == "All")
+        {
+            movie_list = _IMovie.GetMovies();
+            selectedSongCount = _IMovie.GetMovies().Count();
+        }
+        else
+        {
+            movie_list = _IMovie.GetMovieByLanguage(Filter_Language);
+            selectedSongCount = _IMovie.GetMovieByLanguage(Filter_Language).Count();
+        }
+
+        Filter_Director = InitialText;
+        Filter_Year = InitialText;
+        is_current_song_embeded = false;
+        selectedSong = null;
+        song_list = null;
+        StateHasChanged();
+    }
+
+    protected void On_Change_Filter_Director()
+    {
+        if (Filter_Director == "All")
+        {
+            movie_list = _IMovie.GetMovies();
+            selectedSongCount = _IMovie.GetMovies().Count();
+        }
+        else
+        {
+            movie_list = _IMovie.GetMovieByDirector(Filter_Director);
+            selectedSongCount = _IMovie.GetMovieByDirector(Filter_Director).Count();
+        }
+
+        Filter_Language = InitialText;
+        Filter_Year = InitialText;
+        is_current_song_embeded = false;
+        selectedSong = null;
+        song_list = null;
+        StateHasChanged();
+    }
+
+    protected void On_Change_Filter_Year()
+    {
+        if (Filter_Year == "All")
+        {
+            movie_list = _IMovie.GetMovies();
+            selectedSongCount = _IMovie.GetMovies().Count();
+        }
+        else
+        {
+            var selected_year = Convert.ToInt32(Filter_Year);
+            movie_list = _IMovie.GetMovieByYear(selected_year);
+            selectedSongCount = _IMovie.GetMovieByYear(selected_year).Count();
+        }
+
+        Filter_Director = InitialText;
+        Filter_Language = InitialText;
+        is_current_song_embeded = false;
+        selectedSong = null;
+        song_list = null;
+        StateHasChanged();
+    }
+
+    protected void PlayYoutube(string YoutubeLink, string Name, bool isEmbedAllowed)
+    {
+        if (YoutubeLink == "")
+        {
+            return;
+        }
+        else if (isEmbedAllowed)
+        {
+            is_current_song_embeded = true;
+            Url_Link = @"https://www.youtube.com/embed/" + YoutubeLink + "?autoplay=1";
+            selectedSong = Name;
+            StateHasChanged();
+        }
+        else
+        {
+            Url_Link = @"https://www.youtube.com/watch?v=" + YoutubeLink + "";
+            _IJSRuntime.InvokeAsync<object>("open", Url_Link, "_blank");
+            StateHasChanged();
+        }
+    }
+}
